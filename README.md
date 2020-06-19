@@ -16,7 +16,7 @@ Detailed description
 
 | Tool           | Description                                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------------------ |
-| hcxbtdumptool  | Tool to run several tests to determine if Bluetooth device vulnerable                                  |
+| hcxbtdumptool  | Tool to dump Bluetooth packets                                                                         |
 
 
 Get source
