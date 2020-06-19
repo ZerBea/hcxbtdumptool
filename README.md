@@ -26,6 +26,7 @@ git clone https://github.com/ZerBea/hcxbtdumptool.git
 cd hcxbtdumptool
 ```
 
+
 Compile
 --------------
 ```
@@ -44,3 +45,11 @@ Requirements
 * Raspberry Pi A, B, A+, B+, Zero (WH). (Recommended: Zero (WH) or A+, because of a very low power consumption), but notebooks and desktops may work, too.
 
 * GPIO hardware mod recommended (push button and LED).
+
+
+Adapters
+--------------
+
+| VENDOR MODEL         | ID                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| CSR 4.0              | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
