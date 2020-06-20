@@ -15,6 +15,29 @@
 /* global var */
 
 /*===========================================================================*/
+static void globalclose()
+{
+
+exit(EXIT_SUCCESS);
+}
+/*===========================================================================*/
+static inline bool globalinit()
+{
+
+return true;
+}
+/*===========================================================================*/
+static void showdevices()
+{
+static int deviceid;
+bdaddr_t btaddr;
+
+printf("\nID MAC\n---------------\n"); 
+for(deviceid = 0; deviceid < 255; deviceid++)
+if(hci_devba(deviceid, &btaddr) >= 0) printf("%02d %02x%02x%02x%02x%02x%02x\n", deviceid, btaddr.b[5], btaddr.b[4], btaddr.b[3], btaddr.b[2], btaddr.b[1], btaddr.b[0]);
+printf("\n");
+return;
+}
 /*===========================================================================*/
 __attribute__ ((noreturn))
 static inline void version(char *eigenname)
@@ -33,7 +56,9 @@ printf("%s %s  (C) %s ZeroBeat\n"
 	"         https://github.com/ZerBea/hcxdumptool/tree/master/docs\n"
 	"\n"
 	"short options:\n"
-
+	"-D         : show available devices\n"
+	"-h         : show this help\n"
+	"-v         : show version\n"
 	"\n"
 	"long options:\n"
 	"--help            : show this help\n"
@@ -56,7 +81,8 @@ int main(int argc, char *argv[])
 {
 static int auswahl;
 static int index;
-static const char *short_options = "hv";
+static bool showdeviceflag;
+static const char *short_options = "Dhv";
 static const struct option long_options[] =
 {
 	{"version",			no_argument,		NULL,	HCX_VERSION},
@@ -68,11 +94,16 @@ auswahl = -1;
 index = 0;
 optind = 1;
 optopt = 0;
-
+showdeviceflag = false;
 while((auswahl = getopt_long(argc, argv, short_options, long_options, &index)) != -1)
 	{
 	switch (auswahl)
 		{
+
+		case HCX_SHOWDEVICELIST:
+		showdeviceflag = true;
+		break;
+
 		case HCX_HELP:
 		usage(basename(argv[0]));
 		break;
@@ -93,6 +124,19 @@ if(argc < 2)
 	fprintf(stderr, "no option selected\n");
 	exit(EXIT_FAILURE);
 	}
+if(getuid() != 0)
+	{
+	fprintf(stderr, "this program requires root privileges\n");
+	globalclose();
+	}
+
+if(showdeviceflag == true)
+	{
+	showdevices();
+	globalclose();
+	}
+
+globalclose();
 return EXIT_SUCCESS;
 }
 /*===========================================================================*/
