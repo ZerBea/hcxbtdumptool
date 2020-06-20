@@ -14,15 +14,34 @@
 /*===========================================================================*/
 /* global var */
 
+static int fd_socket;
+
 /*===========================================================================*/
 static void globalclose()
 {
-
+if(fd_socket > 0)
+	{
+	if(close(fd_socket) != 0) perror("failed to close HCI socket");
+	}
 exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
 static inline bool globalinit()
 {
+fd_socket = -1;
+
+return true;
+}
+/*===========================================================================*/
+static inline bool opensocket()
+{
+if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0)
+	{
+	perror("failed to open HCI socket");
+	return false;
+	}
+
+
 
 return true;
 }
@@ -127,6 +146,12 @@ if(argc < 2)
 if(getuid() != 0)
 	{
 	fprintf(stderr, "this program requires root privileges\n");
+	globalclose();
+	}
+
+if(globalinit() == false)
+	{
+	fprintf(stderr, "initialization failed\n");
 	globalclose();
 	}
 
