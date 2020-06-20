@@ -24,7 +24,8 @@
 
 static int fd_socket;
 static int deviceid;
-bdaddr_t deviceaddr;
+static bdaddr_t deviceaddr;
+static struct hci_dev_info deviceinfo;
 
 static int gpiostatusled;
 static int gpiobutton;
@@ -274,6 +275,11 @@ if(ioctl(fd_socket, HCIDEVUP, deviceid) < 0)
 	return false;
 	}
 
+if(ioctl(fd_socket, HCIGETDEVINFO, (void*) &deviceinfo) < 0)
+	{
+	perror("failed to get device information");
+	return false;
+	}
 return true;
 }
 /*===========================================================================*/
