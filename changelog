@@ -1,6 +1,7 @@
 20.06.2020
 ==========
-added option (-D) th show available devices
+added option (-D) to show available devices
+added option (-d) to select device id
 
 
 19.06.2020
