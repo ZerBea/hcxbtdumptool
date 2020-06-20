@@ -37,11 +37,17 @@ static bool wantstopflag;
 /*===========================================================================*/
 static void globalclose()
 {
+struct hci_dev_stats *devicestats = &deviceinfo.stat;
+
 printf("\nterminating...\e[?25h\n");
 sync();
 
 if(fd_socket > 0)
 	{
+	printf("RX bytes:%d acl:%d sco:%d events:%d errors:%d\n",
+		devicestats->byte_rx, devicestats->acl_rx, devicestats->sco_rx, devicestats->evt_rx, devicestats->err_rx);
+	printf("TX bytes:%d acl:%d sco:%d commands:%d errors:%d\n\n",
+		devicestats->byte_tx, devicestats->acl_tx, devicestats->sco_tx, devicestats->cmd_tx, devicestats->err_tx);
 	if(close(fd_socket) != 0) perror("failed to close HCI socket");
 	}
 exit(EXIT_SUCCESS);
@@ -275,11 +281,18 @@ if(ioctl(fd_socket, HCIDEVUP, deviceid) < 0)
 	return false;
 	}
 
+if(ioctl(fd_socket, HCIDEVRESTAT, deviceid) < 0)
+	{
+	fprintf(stderr, "failed to reset stats counters on device %d: %s", deviceid, strerror(errno));
+	return false;
+	}
+
 if(ioctl(fd_socket, HCIGETDEVINFO, (void*) &deviceinfo) < 0)
 	{
 	perror("failed to get device information");
 	return false;
 	}
+
 return true;
 }
 /*===========================================================================*/
@@ -418,6 +431,7 @@ if(getuid() != 0)
 	globalclose();
 	}
 
+printf("initialization...\n");
 if(globalinit() == false)
 	{
 	fprintf(stderr, "initialization failed\n");
