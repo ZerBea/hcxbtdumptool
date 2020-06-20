@@ -4,13 +4,21 @@
 #include <errno.h>
 #include <curses.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
 
 #include "include/hcxbtdumptool.h"
+#include "include/rpigpio.h"
+
 /*===========================================================================*/
 /* global var */
 
@@ -18,9 +26,19 @@ static int fd_socket;
 static int deviceid;
 bdaddr_t deviceaddr;
 
+static int gpiostatusled;
+static int gpiobutton;
+static struct timespec sleepled;
+static struct timespec sleepled2;
+
+static bool wantstopflag;
+
 /*===========================================================================*/
 static void globalclose()
 {
+printf("\nterminating...\e[?25h\n");
+sync();
+
 if(fd_socket > 0)
 	{
 	if(close(fd_socket) != 0) perror("failed to close HCI socket");
@@ -28,10 +46,199 @@ if(fd_socket > 0)
 exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
+static inline void programmende(int signum)
+{
+if((signum == SIGINT) || (signum == SIGTERM) || (signum == SIGKILL)) wantstopflag = true;
+return;
+}
+/*===========================================================================*/
+static inline size_t chop(char *buffer, size_t len)
+{
+static char *ptr;
+
+ptr = buffer +len -1;
+while(len)
+	{
+	if (*ptr != '\n') break;
+	*ptr-- = 0;
+	len--;
+	}
+while(len)
+	{
+	if (*ptr != '\r') break;
+	*ptr-- = 0;
+	len--;
+	}
+return len;
+}
+/*---------------------------------------------------------------------------*/
+static inline int fgetline(FILE *inputstream, size_t size, char *buffer)
+{
+static size_t len;
+static char *buffptr;
+
+if(feof(inputstream)) return -1;
+buffptr = fgets (buffer, size, inputstream);
+if(buffptr == NULL) return -1;
+len = strlen(buffptr);
+len = chop(buffptr, len);
+return len;
+}
+/*===========================================================================*/
+static inline bool initgpio(int gpioperi)
+{
+static int fd_mem;
+
+fd_mem = open("/dev/mem", O_RDWR|O_SYNC);
+if(fd_mem < 0)
+	{
+	fprintf(stderr, "failed to get device memory\n");
+	return false;
+	}
+gpio_map = mmap(NULL, BLOCK_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd_mem, GPIO_BASE +gpioperi);
+close(fd_mem);
+if(gpio_map == MAP_FAILED)
+	{
+	fprintf(stderr, "failed to map GPIO memory\n");
+	return false;
+	}
+gpio = (volatile unsigned *)gpio_map;
+return true;
+}
+/*===========================================================================*/
+static inline int getrpirev()
+{
+static FILE *fh_rpi;
+static int len;
+static int rpi = 0;
+static int rev = 0;
+static int gpioperibase = 0;
+static char *revptr = NULL;
+static const char *revstr = "Revision";
+static const char *hwstr = "Hardware";
+static const char *snstr = "Serial";
+static char linein[128];
+
+fh_rpi = fopen("/proc/cpuinfo", "r");
+if(fh_rpi == NULL)
+	{
+	perror("failed to retrieve cpuinfo");
+	return gpioperibase;
+	}
+while(1)
+	{
+	if((len = fgetline(fh_rpi, 128, linein)) == -1) break;
+	if(len < 15) continue;
+	if(memcmp(&linein, hwstr, 8) == 0)
+		{
+		rpi |= 1;
+		continue;
+		}
+	if(memcmp(&linein, revstr, 8) == 0)
+		{
+		rpirevision = strtol(&linein[len -6], &revptr, 16);
+		if((revptr - linein) == len)
+			{
+			rev = (rpirevision >> 4) &0xff;
+			if(rev <= 3)
+				{
+				gpioperibase = GPIO_PERI_BASE_OLD;
+				rpi |= 2;
+				continue;
+				}
+			if(rev == 0x09)
+				{
+				gpioperibase = GPIO_PERI_BASE_OLD;
+				rpi |= 2;
+				continue;
+				}
+			if(rev == 0x0c)
+				{
+				gpioperibase = GPIO_PERI_BASE_OLD;
+				rpi |= 2;
+				continue;
+				}
+			if((rev == 0x04) || (rev == 0x08) || (rev == 0x0d) || (rev == 0x0e) || (rev == 0x11))
+				{
+				gpioperibase = GPIO_PERI_BASE_NEW;
+				rpi |= 2;
+				continue;
+				}
+			continue;
+			}
+		rpirevision = strtol(&linein[len -4], &revptr, 16);
+		if((revptr - linein) == len)
+			{
+			if((rpirevision < 0x02) || (rpirevision > 0x15)) continue;
+			if((rpirevision == 0x11) || (rpirevision == 0x14)) continue;
+			gpioperibase = GPIO_PERI_BASE_OLD;
+			rpi |= 2;
+			}
+		continue;
+		}
+	if(memcmp(&linein, snstr, 6) == 0)
+		{
+		rpi |= 4;
+		continue;
+		}
+	}
+fclose(fh_rpi);
+if(rpi < 0x7) return 0;
+return gpioperibase;
+}
+/*===========================================================================*/
 static inline bool globalinit()
 {
-fd_socket = -1;
+static int c;
+static int gpiobasemem = 0;
 
+wantstopflag = false;
+fd_socket = -1;
+sleepled.tv_sec = 0;
+sleepled.tv_nsec = GPIO_LED_DELAY;
+sleepled2.tv_sec = 0;
+sleepled2.tv_nsec = GPIO_LED_DELAY +GPIO_LED_DELAY;
+rpirevision = 0;
+if((gpiobutton > 0) || (gpiostatusled > 0))
+	{
+	if(gpiobutton == gpiostatusled)
+		{
+		fprintf(stderr, "same value for wpi_button and wpi_statusled is not allowed\n");
+		return false;
+		}
+	gpiobasemem = getrpirev();
+	if(gpiobasemem == 0)
+		{
+		fprintf(stderr, "failed to locate GPIO\n");
+		return false;
+		}
+	if(initgpio(gpiobasemem) == false)
+		{
+		fprintf(stderr, "failed to init GPIO\n");
+		return false;
+		}
+	if(gpiostatusled > 0)
+		{
+		INP_GPIO(gpiostatusled);
+		OUT_GPIO(gpiostatusled);
+		}
+	if(gpiobutton > 0)
+		{
+		INP_GPIO(gpiobutton);
+		}
+	}
+if(gpiostatusled > 0)
+	{
+	for (c = 0; c < 5; c++)
+		{
+		GPIO_SET = 1 << gpiostatusled;
+		nanosleep(&sleepled, NULL);
+		GPIO_CLR = 1 << gpiostatusled;
+		nanosleep(&sleepled2, NULL);
+		}
+	}
+
+signal(SIGINT, programmende);
 return true;
 }
 /*===========================================================================*/
@@ -42,7 +249,6 @@ if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0)
 	perror("failed to open HCI socket");
 	return false;
 	}
-
 
 
 return true;
@@ -103,6 +309,8 @@ static bool showdeviceflag;
 static const char *short_options = "Dhv";
 static const struct option long_options[] =
 {
+	{"gpio_button",			required_argument,	NULL,	HCX_GPIO_BUTTON},
+	{"gpio_statusled",		required_argument,	NULL,	HCX_GPIO_STATUSLED},
 	{"version",			no_argument,		NULL,	HCX_VERSION},
 	{"help",			no_argument,		NULL,	HCX_HELP},
 	{NULL,				0,			NULL,	0}
@@ -113,10 +321,30 @@ index = 0;
 optind = 1;
 optopt = 0;
 showdeviceflag = false;
+gpiobutton = 0;
+gpiostatusled = 0;
+
 while((auswahl = getopt_long(argc, argv, short_options, long_options, &index)) != -1)
 	{
 	switch (auswahl)
 		{
+		case HCX_GPIO_BUTTON:
+		gpiobutton = strtol(optarg, NULL, 10);
+		if((gpiobutton < 2) || (gpiobutton > 27))
+			{
+			fprintf(stderr, "only 2...27 allowed\n");
+			exit(EXIT_FAILURE);
+			}
+		break;
+
+		case HCX_GPIO_STATUSLED:
+		gpiostatusled = strtol(optarg, NULL, 10);
+		if((gpiostatusled < 2) || (gpiostatusled > 27))
+			{
+			fprintf(stderr, "only 2...27 allowed\n");
+			exit(EXIT_FAILURE);
+			}
+		break;
 
 		case HCX_SHOWDEVICELIST:
 		showdeviceflag = true;
@@ -157,7 +385,7 @@ if(globalinit() == false)
 if(showdeviceflag == true)
 	{
 	showdevices();
-	globalclose();
+	return EXIT_SUCCESS;
 	}
 
 globalclose();
