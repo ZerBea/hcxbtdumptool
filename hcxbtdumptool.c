@@ -15,6 +15,8 @@
 /* global var */
 
 static int fd_socket;
+static int deviceid;
+bdaddr_t deviceaddr;
 
 /*===========================================================================*/
 static void globalclose()
@@ -48,12 +50,9 @@ return true;
 /*===========================================================================*/
 static void showdevices()
 {
-static int deviceid;
-bdaddr_t btaddr;
-
 printf("\nID MAC\n---------------\n"); 
 for(deviceid = 0; deviceid < 255; deviceid++)
-if(hci_devba(deviceid, &btaddr) >= 0) printf("%02d %02x%02x%02x%02x%02x%02x\n", deviceid, btaddr.b[5], btaddr.b[4], btaddr.b[3], btaddr.b[2], btaddr.b[1], btaddr.b[0]);
+if(hci_devba(deviceid, &deviceaddr) >= 0) printf("%02d %02x%02x%02x%02x%02x%02x\n", deviceid, deviceaddr.b[5], deviceaddr.b[4], deviceaddr.b[3], deviceaddr.b[2], deviceaddr.b[1], deviceaddr.b[0]);
 printf("\n");
 return;
 }
