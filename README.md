@@ -3,7 +3,11 @@ hcxbtdumptool
 
 Small tool to capture packets from Bluetooth devices.
 
-Initial commit - no Bluetooth functions - only help and version menue available
+Initial commit - no Bluetooth functions - only help and version menue available.
+
+This is a playground to get some knowledge about coding Bluetooth.
+
+Everything is high experimental.
 
 
 Brief description
