@@ -244,6 +244,17 @@ return true;
 /*===========================================================================*/
 static inline bool opensocket()
 {
+if(deviceid == -1)
+	{
+	printf("no device selected, using first reachable device\n");
+	deviceid = hci_devid(NULL);
+	}
+if(deviceid < 0)
+	{
+	fprintf(stderr, "found no suitable device");
+	return false;
+	}
+
 if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0)
 	{
 	perror("failed to open HCI socket");
@@ -252,14 +263,14 @@ if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0)
 
 if(ioctl(fd_socket, HCIDEVDOWN, deviceid) < 0)
 	{
-	fprintf(stderr, "failed to down device %d: %s (%d)\n", deviceid, strerror(errno), errno);
+	fprintf(stderr, "failed to bring down device %d down: %s\n", deviceid, strerror(errno));
 	return false;
 	}
 
 if(ioctl(fd_socket, HCIDEVUP, deviceid) < 0)
 	{
 	if(errno == EALREADY) return false;
-	fprintf(stderr, "failed to init device %d: %s (%d)\n", deviceid, strerror(errno), errno);
+	fprintf(stderr, "failed to inititialize device %d: %s\n", deviceid, strerror(errno));
 	return false;
 	}
 
@@ -412,8 +423,6 @@ if(opensocket() == false)
 	fprintf(stderr, "initialization failed\n");
 	globalclose();
 	}
-
-
 
 globalclose();
 return EXIT_SUCCESS;
