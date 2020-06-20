@@ -250,6 +250,18 @@ if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0)
 	return false;
 	}
 
+if(ioctl(fd_socket, HCIDEVDOWN, deviceid) < 0)
+	{
+	fprintf(stderr, "failed to down device %d: %s (%d)\n", deviceid, strerror(errno), errno);
+	return false;
+	}
+
+if(ioctl(fd_socket, HCIDEVUP, deviceid) < 0)
+	{
+	if(errno == EALREADY) return false;
+	fprintf(stderr, "failed to init device %d: %s (%d)\n", deviceid, strerror(errno), errno);
+	return false;
+	}
 
 return true;
 }
@@ -280,6 +292,7 @@ printf("%s %s  (C) %s ZeroBeat\n"
 	"         https://github.com/ZerBea/hcxdumptool/tree/master/docs\n"
 	"\n"
 	"short options:\n"
+	"-d <digit> : input device id\n"
 	"-D         : show available devices\n"
 	"-h         : show this help\n"
 	"-v         : show version\n"
@@ -306,7 +319,7 @@ int main(int argc, char *argv[])
 static int auswahl;
 static int index;
 static bool showdeviceflag;
-static const char *short_options = "Dhv";
+static const char *short_options = "d:Dhv";
 static const struct option long_options[] =
 {
 	{"gpio_button",			required_argument,	NULL,	HCX_GPIO_BUTTON},
@@ -320,14 +333,19 @@ auswahl = -1;
 index = 0;
 optind = 1;
 optopt = 0;
-showdeviceflag = false;
+deviceid = -1;
 gpiobutton = 0;
 gpiostatusled = 0;
+showdeviceflag = false;
 
 while((auswahl = getopt_long(argc, argv, short_options, long_options, &index)) != -1)
 	{
 	switch (auswahl)
 		{
+		case HCX_DEVICEID:
+		deviceid = strtol(optarg, NULL, 10);
+		break;
+
 		case HCX_GPIO_BUTTON:
 		gpiobutton = strtol(optarg, NULL, 10);
 		if((gpiobutton < 2) || (gpiobutton > 27))
@@ -370,6 +388,13 @@ if(argc < 2)
 	fprintf(stderr, "no option selected\n");
 	exit(EXIT_FAILURE);
 	}
+
+if(showdeviceflag == true)
+	{
+	showdevices();
+	return EXIT_SUCCESS;
+	}
+
 if(getuid() != 0)
 	{
 	fprintf(stderr, "this program requires root privileges\n");
@@ -382,11 +407,13 @@ if(globalinit() == false)
 	globalclose();
 	}
 
-if(showdeviceflag == true)
+if(opensocket() == false)
 	{
-	showdevices();
-	return EXIT_SUCCESS;
+	fprintf(stderr, "initialization failed\n");
+	globalclose();
 	}
+
+
 
 globalclose();
 return EXIT_SUCCESS;
