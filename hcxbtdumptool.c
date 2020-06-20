@@ -44,12 +44,13 @@ sync();
 
 if(fd_socket > 0)
 	{
-	printf("RX bytes:%d acl:%d sco:%d events:%d errors:%d\n",
-		devicestats->byte_rx, devicestats->acl_rx, devicestats->sco_rx, devicestats->evt_rx, devicestats->err_rx);
-	printf("TX bytes:%d acl:%d sco:%d commands:%d errors:%d\n\n",
-		devicestats->byte_tx, devicestats->acl_tx, devicestats->sco_tx, devicestats->cmd_tx, devicestats->err_tx);
+	printf("INCOMING: %d ERROR: %d\n",
+		devicestats->byte_rx, devicestats->err_rx);
+	printf("OUTGOING: %d ERROR: %d\n",
+		devicestats->byte_tx, devicestats->err_tx);
 	if(close(fd_socket) != 0) perror("failed to close HCI socket");
 	}
+printf("\n");
 exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
