@@ -9,6 +9,8 @@ This is a playground to get some knowledge about coding Bluetooth.
 
 Everything is high experimental.
 
+Similar to hcxdumptool (WiFi) we use ioctl() system calls to control the device.
+
 
 Brief description
 --------------
