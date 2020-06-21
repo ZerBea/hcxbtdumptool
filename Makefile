@@ -43,7 +43,7 @@ endif
 
 
 ifeq ($(HOSTOS), Linux)
-	rm -f hcxdumptool
+	rm -f hcxbtdumptool
 else
 	$(info OS not supported)
 endif
