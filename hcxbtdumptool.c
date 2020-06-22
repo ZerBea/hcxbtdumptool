@@ -299,9 +299,23 @@ return true;
 /*===========================================================================*/
 static void showdevices()
 {
+static bool btlflag = false;
+
 printf("\nID MAC\n---------------\n"); 
 for(deviceid = 0; deviceid < 255; deviceid++)
-if(hci_devba(deviceid, &deviceaddr) >= 0) printf("%02d %02x%02x%02x%02x%02x%02x\n", deviceid, deviceaddr.b[5], deviceaddr.b[4], deviceaddr.b[3], deviceaddr.b[2], deviceaddr.b[1], deviceaddr.b[0]);
+if(hci_devba(deviceid, &deviceaddr) >= 0)
+	{
+	btlflag = true;
+	printf("%02d %02x%02x%02x%02x%02x%02x\n", deviceid, deviceaddr.b[5], deviceaddr.b[4], deviceaddr.b[3], deviceaddr.b[2], deviceaddr.b[1], deviceaddr.b[0]);
+	}
+
+if(btlflag == false)
+	{
+	printf("found no suitable device or Bleutooth not activated!\n"
+		"Procedure to active Bluetooth:\n"
+		"systemctl start bluetooth\n"
+		"bluetoothctl power on\n");
+	}
 printf("\n");
 return;
 }
@@ -332,6 +346,9 @@ printf("%s %s  (C) %s ZeroBeat\n"
 	"--help            : show this help\n"
 	"--version         : show version\n"
 	"\n"
+	"Procedure to active Bluetooth:\n"
+	"systemctl start bluetooth\n"
+	"bluetoothctl power on\n"
 	"\n",
 	eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_SUCCESS);
