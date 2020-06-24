@@ -15,6 +15,9 @@
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/socket.h>
 
 #include "include/hcxbtdumptool.h"
 #include "include/rpigpio.h"
@@ -44,15 +47,53 @@ sync();
 
 if(fd_socket > 0)
 	{
-	printf("INCOMING: %d ERROR: %d\n",
-		devicestats->byte_rx, devicestats->err_rx);
-	printf("OUTGOING: %d ERROR: %d\n",
-		devicestats->byte_tx, devicestats->err_tx);
+	if(ioctl(fd_socket, HCIGETDEVINFO, (void*) &deviceinfo) >= 0)
+		{
+		printf("INCOMING: %d ERROR: %d\n",
+			devicestats->byte_rx, devicestats->err_rx);
+		printf("OUTGOING: %d ERROR: %d\n",
+			devicestats->byte_tx, devicestats->err_tx);
+		}
 	if(close(fd_socket) != 0) perror("failed to close HCI socket");
 	}
 printf("\n");
 exit(EXIT_SUCCESS);
 }
+/*===========================================================================*/
+/*===========================================================================*/
+static void bdscanloop()
+{
+static struct hci_inquiry_req *hir;
+static inquiry_info *zeiger;
+static uint8_t mc;
+static uint8_t nrsp = 255;
+static uint8_t len = 8;
+static uint16_t flags = IREQ_CACHE_FLUSH;
+uint8_t hirb[sizeof(struct hci_inquiry_req) + (sizeof(inquiry_info) *nrsp)];
+
+hir = (struct hci_inquiry_req*)hirb;
+while(1)
+	{
+	if(wantstopflag == true) return;
+	hir->dev_id  = deviceid;
+	hir->flags   = flags;
+	hir->lap[0] = 0x33;
+	hir->lap[1] = 0x8b;
+	hir->lap[2] = 0x9e;
+	hir->length  = len;
+	hir->num_rsp = nrsp;
+	if(ioctl(fd_socket, HCIINQUIRY, hir) < 0) return;
+
+	zeiger = (inquiry_info*)(hirb + sizeof(*hir));
+	for(mc = 0; mc < hir->num_rsp; mc++)
+		{
+		printf("%02x%02x%02x%02x%02x%02x\n", zeiger->bdaddr.b[5], zeiger->bdaddr.b[4], zeiger->bdaddr.b[3], zeiger->bdaddr.b[2], zeiger->bdaddr.b[1], zeiger->bdaddr.b[0]);
+		zeiger++;
+		}
+	}
+return;
+}
+/*===========================================================================*/
 /*===========================================================================*/
 static inline void programmende(int signum)
 {
@@ -263,7 +304,7 @@ if(deviceid < 0)
 	return false;
 	}
 
-if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0)
+if((fd_socket = socket(AF_BLUETOOTH, SOCK_RAW | SOCK_CLOEXEC, BTPROTO_HCI)) < 0)
 	{
 	perror("failed to open HCI socket");
 	return false;
@@ -293,7 +334,6 @@ if(ioctl(fd_socket, HCIGETDEVINFO, (void*) &deviceinfo) < 0)
 	perror("failed to get device information");
 	return false;
 	}
-
 return true;
 }
 /*===========================================================================*/
@@ -367,9 +407,11 @@ int main(int argc, char *argv[])
 static int auswahl;
 static int index;
 static bool showdeviceflag;
+static bool bdscanflag;
 static const char *short_options = "d:Dhv";
 static const struct option long_options[] =
 {
+	{"bdscan",			no_argument,		NULL,	HCX_BDSCAN},
 	{"gpio_button",			required_argument,	NULL,	HCX_GPIO_BUTTON},
 	{"gpio_statusled",		required_argument,	NULL,	HCX_GPIO_STATUSLED},
 	{"version",			no_argument,		NULL,	HCX_VERSION},
@@ -385,6 +427,7 @@ deviceid = -1;
 gpiobutton = 0;
 gpiostatusled = 0;
 showdeviceflag = false;
+bdscanflag = false;
 
 while((auswahl = getopt_long(argc, argv, short_options, long_options, &index)) != -1)
 	{
@@ -392,6 +435,10 @@ while((auswahl = getopt_long(argc, argv, short_options, long_options, &index)) !
 		{
 		case HCX_DEVICEID:
 		deviceid = strtol(optarg, NULL, 10);
+		break;
+
+		case HCX_BDSCAN:
+		bdscanflag = true;
 		break;
 
 		case HCX_GPIO_BUTTON:
@@ -459,6 +506,12 @@ if(globalinit() == false)
 if(opensocket() == false)
 	{
 	fprintf(stderr, "initialization failed\n");
+	globalclose();
+	}
+
+if(bdscanflag == true)
+	{
+	bdscanloop();
 	globalclose();
 	}
 
