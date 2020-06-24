@@ -58,6 +58,7 @@ Requirements
 Adapters
 --------------
 
-| VENDOR MODEL         | ID                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| CSR 4.0              | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
+| VENDOR MODEL            | ID                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| common CSR 4.0 device   | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
+| DELOCK CLASS 1 EDR 150m | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
