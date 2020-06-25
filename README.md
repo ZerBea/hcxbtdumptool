@@ -46,9 +46,9 @@ make install (as super user)
 Requirements
 --------------
 
-* Operatingsystem: Arch Linux (strict), Kernel >= 4.19 (strict). It may work on other Linux systems (notebooks, desktops) and distributions, too (no support for other distributions, no support for other operating systems)
+* Operatingsystem: Arch Linux (strict), Kernel >= 5.4 (strict). It may work on other Linux systems (notebooks, desktops) and distributions, too (no support for other distributions, no support for other operating systems)
 
-* bluez installed
+* bluetooth and libbluetooth-dev installed
 
 * Raspberry Pi A, B, A+, B+, Zero (WH). (Recommended: Zero (WH) or A+, because of a very low power consumption), but notebooks and desktops may work, too.
 
@@ -60,5 +60,5 @@ Adapters
 
 | VENDOR MODEL            | ID                                                                                            |
 | ----------------------- | --------------------------------------------------------------------------------------------- |
-| common CSR 4.0 device   | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
+| generic CSR 4.0 devic   | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
 | DELOCK CLASS 1 EDR 150m | ID 0a12:0001 Cambridge Silicon Radio, Ltd Bluetooth Dongle (HCI mode)                         |
