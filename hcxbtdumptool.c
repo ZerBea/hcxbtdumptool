@@ -70,6 +70,12 @@ static uint8_t nrsp = 255;
 static uint8_t len = 8;
 static uint16_t flags = IREQ_CACHE_FLUSH;
 uint8_t hirb[sizeof(struct hci_inquiry_req) + (sizeof(inquiry_info) *nrsp)];
+int socket;
+
+char name[248] = { 0 };
+
+socket = hci_open_dev( deviceid );
+
 
 hir = (struct hci_inquiry_req*)hirb;
 while(1)
@@ -87,7 +93,8 @@ while(1)
 	zeiger = (inquiry_info*)(hirb + sizeof(*hir));
 	for(mc = 0; mc < hir->num_rsp; mc++)
 		{
-		printf("%02x%02x%02x%02x%02x%02x\n", zeiger->bdaddr.b[5], zeiger->bdaddr.b[4], zeiger->bdaddr.b[3], zeiger->bdaddr.b[2], zeiger->bdaddr.b[1], zeiger->bdaddr.b[0]);
+		if(hci_read_remote_name(socket, &zeiger->bdaddr, sizeof(name), name, 0) < 0) strcpy(name, "[unknown]");
+		printf("%02x%02x%02x%02x%02x%02x %s\n", zeiger->bdaddr.b[5], zeiger->bdaddr.b[4], zeiger->bdaddr.b[3], zeiger->bdaddr.b[2], zeiger->bdaddr.b[1], zeiger->bdaddr.b[0], name);
 		zeiger++;
 		}
 	}
@@ -383,6 +390,7 @@ printf("%s %s  (C) %s ZeroBeat\n"
 	"-v         : show version\n"
 	"\n"
 	"long options:\n"
+	"--bdscan          : scan for Bluetooth devices in range\n"
 	"--help            : show this help\n"
 	"--version         : show version\n"
 	"\n"
