@@ -36,7 +36,7 @@ static struct timespec sleepled;
 static struct timespec sleepled2;
 
 static bool wantstopflag;
-
+static unsigned char ble[HCI_MAX_FRAME_SIZE +2];
 /*===========================================================================*/
 static void globalclose()
 {
@@ -60,10 +60,21 @@ printf("\n");
 exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
+static inline void process_ble_packet()
+{ 
+
+
+return;
+}
+/*===========================================================================*/
 static void blescanloop()
 {
 struct hci_filter filter;
 struct sockaddr_hci addr;
+
+static int fdnum;
+static fd_set readfds;
+static struct timeval tvfd;
 
 uint8_t scan_type = 0x00; /* passive - active */
 uint16_t interval = htobs(0x0010);
@@ -97,9 +108,25 @@ if(hci_le_set_scan_enable(fd_socket, 1, 0, 1000) < 0)
 	{
 	perror("failed to enable BLE scan"); return;
 	} 
-
-
-
+tvfd.tv_sec = FDUSECTIMER;
+tvfd.tv_usec = 0;
+while(1)
+	{
+	if(wantstopflag == true) return;
+	FD_ZERO(&readfds);
+	FD_SET(fd_socket, &readfds);
+	fdnum = select(fd_socket +1, &readfds, NULL, NULL, &tvfd);
+	if(fdnum < 0)
+		{
+		continue;
+		}
+	if(FD_ISSET(fd_socket, &readfds)) process_ble_packet();
+	else
+		{
+		tvfd.tv_sec = FDUSECTIMER;
+		tvfd.tv_usec = 0;
+		}
+	}
 return;
 }
 /*===========================================================================*/
