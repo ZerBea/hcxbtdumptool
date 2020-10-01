@@ -60,6 +60,48 @@ printf("\n");
 exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
+static void blescanloop()
+{
+struct hci_filter filter;
+struct sockaddr_hci addr;
+
+uint8_t scan_type = 0x00; /* passive - active */
+uint16_t interval = htobs(0x0010);
+uint16_t window = htobs(0x0010);
+uint8_t own_type = 0x00;
+uint8_t filter_policy = 0x00; /* whitelist - blacklist */
+
+hci_filter_clear(&filter);
+hci_filter_all_ptypes(&filter);
+hci_filter_all_events(&filter);
+    
+if(setsockopt(fd_socket, SOL_HCI, HCI_FILTER, &filter, sizeof(filter)) == -1)
+	{
+	perror("failed to set socket options"); return;
+	}
+
+memset(&addr, 0, sizeof(addr));
+addr.hci_family = AF_BLUETOOTH;
+addr.hci_dev = 0;
+if(bind(fd_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+	{
+	perror("failed to bind socket"); return;
+	}
+
+if(hci_le_set_scan_parameters(fd_socket, scan_type, interval, window, own_type, filter_policy, 1000) < 0)
+	{
+	perror("failed to set scan parameters"); return;
+	}
+    
+if(hci_le_set_scan_enable(fd_socket, 1, 0, 1000) < 0)
+	{
+	perror("failed to enable BLE scan"); return;
+	} 
+
+
+
+return;
+}
 /*===========================================================================*/
 static void bdscanloop()
 {
