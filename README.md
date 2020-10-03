@@ -48,6 +48,8 @@ Requirements
 
 * Operatingsystem: Arch Linux (strict), Kernel >= 5.4 (strict). It may work on other Linux systems (notebooks, desktops) and distributions, too (no support for other distributions, no support for other operating systems)
 
+* gcc 10 recommended (deprecated versions are not supported: https://gcc.gnu.org/)
+
 * bluetooth and libbluetooth-dev installed
 
 * Raspberry Pi A, B, A+, B+, Zero (WH). (Recommended: Zero (WH) or A+, because of a very low power consumption), but notebooks and desktops may work, too.
