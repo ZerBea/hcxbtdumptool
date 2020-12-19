@@ -44,7 +44,6 @@ struct hci_dev_stats *devicestats = &deviceinfo.stat;
 
 printf("\nterminating...\e[?25h\n");
 sync();
-
 if(fd_socket > 0)
 	{
 	if(ioctl(fd_socket, HCIGETDEVINFO, (void*) &deviceinfo) >= 0)
