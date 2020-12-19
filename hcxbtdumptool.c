@@ -70,7 +70,6 @@ static void blescanloop()
 {
 struct hci_filter filter;
 struct sockaddr_hci addr;
-
 static int fdnum;
 static fd_set readfds;
 static struct timeval tvfd;
