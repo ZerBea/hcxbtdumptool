@@ -84,7 +84,6 @@ uint8_t filter_policy = 0x00; /* whitelist - blacklist */
 hci_filter_clear(&filter);
 hci_filter_all_ptypes(&filter);
 hci_filter_all_events(&filter);
-    
 if(setsockopt(fd_socket, SOL_HCI, HCI_FILTER, &filter, sizeof(filter)) == -1)
 	{
 	perror("failed to set socket options"); return;
