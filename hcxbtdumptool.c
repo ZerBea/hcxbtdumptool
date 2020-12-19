@@ -141,8 +141,6 @@ int socket;
 char name[248] = { 0 };
 
 socket = hci_open_dev( deviceid );
-
-
 hir = (struct hci_inquiry_req*)hirb;
 while(1)
 	{
